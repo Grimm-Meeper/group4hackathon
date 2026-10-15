@@ -1,16 +1,29 @@
-//python -m http.server
+// python -m http.server
 let Pa, Pb;
 let segments = [];
 let controls = [[87, 83, 65, 68], [38, 40, 37, 39]];
 let drops = []
 let PD = ["food", "sword", "shield"]
+
+/*
+*Collision matrix:
+*if you hit them and you...
+* ...have a sword and they don't have a shield, they die
+* ...have a sword and they have a shield, you stop
+* ...have a shield, you stop
+* ...have nothing you die
+* if you hit the edge you loop
+* what happens if you hit yourself?
+* 
+*/
 function setup() {
     createCanvas(windowWidth - 20, windowHeight - 20);
     background("#aabbcc");
     Pa = new head(20, 20, 20);
     Pb = new head(200, 200, 20);
-    console.log(height, width)
 }
+
+/////////////////////////////////////////////////////////////////////////////
 
 function draw() {
     background("#aabbcc");
@@ -27,21 +40,34 @@ function draw() {
     Pb.move();
 }
 
+/////////////////////////////////////////////////////////////////////////////
+
 class body {
     constructor(x, y, time){
         this.death = frameCount + time;
         this.x = x;
         this.y = y;
+        this.state = "none";
     }
     step(){
         if(frameCount < this.death){
             fill("#00FF00");
             noStroke();
-            circle(this.x, this.y, 10);
+            circle(this.x, this.y, 20);
         }
+    }
+    getPos(){
+        return[this.x, this.y];
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////
+/*
+function preload() {
+  // Make sure the filename matches your PNG perfectly
+  snake1head = loadImage('myImage.png'); 
+}
+*/
 class head {
     constructor(x, y, time) {
         this.x = x;
@@ -61,8 +87,13 @@ class head {
             this.x += 5;
         }
         fill("#3ac43a");
+        if(this.state == "sword"){
+            //give shield
+        } else if(this.state == "shield"){
+            //give sword
+        }
         noStroke();
-        circle(this.x, this.y, 10);
+        circle(this.x, this.y, 20);
         this.collision();
     }
     turn(D){
@@ -93,8 +124,28 @@ class head {
             this.y = height;
             console.log("bottom");
         }
+        for(let i = 0; i < drops.length; i++){
+            if(dist(drops[i].getPos()[0], drops[i].getPos()[1], this.x, this.y) <= 40){
+                let gain = drops[i].consume();
+                if(gain = "food"){
+                    this.time += 5;
+                } else if(gain = "sword" || gain == "shield"){
+                    this.state = gain;
+                }
+            }
+        }
+        for(let i =0; i < segments.length; i++){
+            if(dist(segments[i].getPos()[0], segments[i].getPos()[1], this.x, this.y) <= 40){
+                this.kill();
+            }
+        }
+    }
+    kill(){
+        //onsole.log("die")
     }
 }
+
+/////////////////////////////////////////////////////////////////////////////
 
 function keyPressed(){
     if(keyCode == controls[0][0]){
@@ -124,16 +175,26 @@ class powerup{
     }
     draw(){
         if(this.type == "food"){
-            fill("#FF0000");
+            fill("#c96c6c");//food
         } else if (this.type == "sword"){
-            fill("#757575");
+            fill("#757575");//sword
         } else if(this.type == "shield"){
-            fill("#855b00");
+            fill("#855b00");//shield
+        } else {
+            return;//used
         }
         noStroke();
         circle(this.x, this.y, 20);
     }
     getPos(){
-        return(this.x, this.y);
+        if(this.type == "none"){
+            return(-10000, -10000);
+        }
+        return[this.x, this.y];
+    }
+    consume(){
+        let temp =  this.type;
+        this.type = "none";
+        return temp;
     }
 }
