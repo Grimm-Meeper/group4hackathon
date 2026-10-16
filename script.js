@@ -1,9 +1,15 @@
 // python -m http.server
+
+/////////////////////////////////////////////////////////////////////////////
+
 let Pa, Pb;
 let segments = [];
 let controls = [[87, 83, 65, 68], [38, 40, 37, 39]];
 let drops = []
 let PD = ["food", "sword", "shield"]
+let snake1head, snake2head, snake1body, snake2body;
+let backsize = 200
+/////////////////////////////////////////////////////////////////////////////
 
 /*
 *Collision matrix:
@@ -16,21 +22,40 @@ let PD = ["food", "sword", "shield"]
 * what happens if you hit yourself?
 * 
 */
+
 function setup() {
     createCanvas(windowWidth - 20, windowHeight - 20);
     background("#aabbcc");
-    Pa = new head(20, 20, 20);
-    Pb = new head(200, 200, 20);
+    Pa = new head(20, 20, 20, "a");
+    Pb = new head(200, 200, 20, "b");
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+function preload() {
+  // Make sure the filename matches your PNG perfectly
+  snake1head = loadImage('snake1head32x.png');
+  snake1body = loadImage('snake1body32x.png');
+
+  snake2head = loadImage('snake2head32x.png'); 
+  snake2body = loadImage('snake2body32x.png');  
+
+  snakearena = loadImage('snakearena32x.png');
+
+  snakefood = loadImage('snakefood32x.png');
+
+  snakeshield = loadImage('snakeshield32x.png');
+  snakesword = loadImage('snakesword32x.png');
 }
 
 /////////////////////////////////////////////////////////////////////////////
 
 function draw() {
-    background("#aabbcc");
+    background(30);
     for(let i = 0; i < segments.length; i++){
         segments[i].step();
     }
-    if(frameCount % 30 == 0){
+    if(frameCount % 60 == 0){
         drops.push(new powerup())
     }
     for(let i = 0; i < drops.length; i++){
@@ -41,42 +66,71 @@ function draw() {
 }
 
 /////////////////////////////////////////////////////////////////////////////
-
+/*
+function spacedrop(){
+    for(let i = 0; i <= width % backsize; i++) {
+        for(let j = 0; j <= height % backsize; j++) {
+            image(snakearena, i, j, backsize, backsize)
+        }
+    }
+}
+*/
+/////////////////////////////////////////////////////////////////////////////
 class body {
-    constructor(x, y, time){
+    constructor(x, y, time, team){
         this.death = frameCount + time;
         this.x = x;
         this.y = y;
         this.state = "none";
+        this.kill = false
+        if(team){
+            this.image = snake1body
+        } else {
+            this.image = snake2body
+        }
     }
     step(){
         if(frameCount < this.death){
-            fill("#00FF00");
             noStroke();
-            circle(this.x, this.y, 20);
+            image(this.image, this.x-10, this.y-10, 20, 20);
+            this.collision();
         }
     }
     getPos(){
         return[this.x, this.y];
     }
+    collision(){
+        if(dist(Pa.getPos()[0], Pa.getPos()[1], this.x, this.y) <= 40){
+            if(this.kill){
+                console.log("kill A")
+            }
+        } else if(dist(Pb.getPos()[0], Pb.getPos()[1], this.x, this.y) <= 40){
+            if(this.kill){
+                console.log("kill B")
+            }
+        } else {
+            this.kill = true
+        }
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////
-/*
-function preload() {
-  // Make sure the filename matches your PNG perfectly
-  snake1head = loadImage('myImage.png'); 
-}
-*/
+
 class head {
-    constructor(x, y, time) {
+    constructor(x, y, time, team) {
         this.x = x;
         this.y = y;
         this.time = time;
         this.D = "";
+        this.team = (team == "a")
+        if(team == "a"){
+            this.image = snake1head
+        } else {
+            this.image = snake2head
+        }
     }
     move(){
-        segments.push(new body(this.x, this.y, this.time));
+        segments.push(new body(this.x, this.y, this.time, this.team));
         if(this.D == "up"){
             this.y -= 5;
         } else if(this.D == "down"){
@@ -86,14 +140,13 @@ class head {
         } else if(this.D == "right"){
             this.x += 5;
         }
-        fill("#3ac43a");
         if(this.state == "sword"){
             //give shield
         } else if(this.state == "shield"){
             //give sword
         }
         noStroke();
-        circle(this.x, this.y, 20);
+        image(this.image, this.x-10, this.y-10, 20, 20); 
         this.collision();
     }
     turn(D){
@@ -113,16 +166,16 @@ class head {
     collision(){
         if(this.x > width){
             this.x = 0;
-            console.log("left");
+            //console.log("left");
         } else if(this.x < 0){
             this.x = width;
-            console.log("right");
+            //console.log("right");
         } else if(this.y > height){
             this.y = 0;
-            console.log("top");
+            //console.log("top");
         } else if(this.y < 0){
             this.y = height;
-            console.log("bottom");
+            //console.log("bottom");
         }
         for(let i = 0; i < drops.length; i++){
             if(dist(drops[i].getPos()[0], drops[i].getPos()[1], this.x, this.y) <= 40){
@@ -134,14 +187,12 @@ class head {
                 }
             }
         }
-        for(let i =0; i < segments.length; i++){
-            if(dist(segments[i].getPos()[0], segments[i].getPos()[1], this.x, this.y) <= 40){
-                this.kill();
-            }
-        }
     }
     kill(){
-        //onsole.log("die")
+        //console.log("die")
+    }
+    getPos(){
+        return[this.x, this.y];
     }
 }
 
@@ -172,19 +223,20 @@ class powerup{
         this.x = random(0, width);
         this.y = random(0, height);
         this.type = PD[Math.floor(random(0, PD.length))];
+        this.image
     }
     draw(){
         if(this.type == "food"){
-            fill("#c96c6c");//food
+            this.image = snakefood;//food
         } else if (this.type == "sword"){
-            fill("#757575");//sword
+            this.image = snakesword;//sword
         } else if(this.type == "shield"){
-            fill("#855b00");//shield
+            this.image = snakeshield;//shield
         } else {
             return;//used
         }
         noStroke();
-        circle(this.x, this.y, 20);
+        image(this.image, this.x - 10, this.y - 10, 40, 40);
     }
     getPos(){
         if(this.type == "none"){
